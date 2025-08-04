@@ -1,0 +1,69 @@
+service: dailyTask
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-jetpack
+  # - serverless-offline
+
+
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-west-2
+
+  environment:
+    TASK_TOPIC_ARN:
+      Ref: TaskNotificationTopic
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+        - sns:Publish
+      Resource: 
+        - arn:aws:dynamodb:us-west-2:180294174325:table/TaskTable
+        - arn:aws:sns:us-west-2:180294174325:task-created-topic
+  
+functions:
+  hello:
+    handler: src/aws-infrastructure/lambda-handlers/hello.handler
+    events:
+      - httpApi:
+          method: any
+          path: /{proxy+}
+  
+  # hello2:
+  #   handler: src/addTask.addTask
+  #   events:
+  #     - httpApi: '*'
+
+resources:
+  Resources:
+    TaskTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: TaskTable
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType:  HASH
+
+    TaskNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: task-created-topic
+
+    EmailSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        TopicArn:
+          Ref: TaskNotificationTopic
+        Protocol: email
+        Endpoint: sherenciamonrroy24@gmail.com
+
